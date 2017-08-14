@@ -1,0 +1,200 @@
+<!DOCTYPE HTML>
+<html>  
+<head>
+	<title>YQL-Stock Watcher</title>  
+	<meta charset="UTF-8">
+	<meta http-equiv="Pragma" CONTENT="no-cache">
+	<meta http-equiv="Expires" CONTENT="-1" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		
+	<link href='https://fonts.googleapis.com/css?family=Droid Serif' rel='stylesheet'>
+  
+<style type='text/css'> 
+	body{font-family: 'Droid Serif';font-size: 22px;}
+	input{font-family: 'Droid Serif';font-size: 22px; padding: 5px; margin: 5px; border-radius: 5px;}
+	*{margin:0; padding:0;}
+	.container{min-width: 400px; background-color: silver; min-height: 1000px;}
+	.quotes{ width: 380px; margin: 5px 5px 5px 5px; border: 2px solid gray; padding-top: 10px; height: 180px; display: inline-block; padding-left: 15px; border-radius: 10px; }  
+	.name{font-size: 1.25em; font-weight: bold; margin-top: 10px;}
+	.red{color:red; margin-top: 25px;}
+	.green{color:green; margin-top: 25px;}
+	.innerdiv{border-right: 2px solid black; height: 100px; width: 100px; position: relative; top: -100px; left: 180px;}
+	.pointer{height: 40px; width: 50px; position: absolute; right: 0px;font-size: xx-large; text-align: right; padding: 0px;}
+	.high{height:20px; position: relative; top:-5px; left: 110px; width: 80px;}
+	.low{height:20px; position: relative; top:65px; left: 110px; width: 80px;}
+	.center{margin-left: auto; margin-right: auto; text-align: center;}
+	#inputarea{width: 300px;}
+	.lastprice{font-size: 1.5em;}
+	
+@media only screen and (max-width: 500px) {
+    .quotes{ width: 360px; margin-left: auto; margin-right: auto; margin-top: 10px; border: 2px solid gray; padding-top: 0px; height: 100px; padding-left: 15px; border-radius: 15px; display: block; }  
+	.innerdiv{display: none;}
+	.pointer{display: none;}
+	.lastprice{left: 220px; top: -18px; position: relative; font-size: 0.9em;}
+	.symbol{display: none;}
+	.red,.green{left: 220px; top: -23px; position: relative; font-size: 0.8em;}
+	.name{font-size: 1em; font-weight: bold; margin-top: 10px;}
+}
+</style>  
+  
+<script type='text/javascript'>  
+	var tickers = ['GE','GOOG','GM'];
+
+function ajaxObj(method, url){
+	 var x = new XMLHttpRequest();
+	 x.open(method,url,true);
+	 x.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+	 return x;
+}
+
+function ajaxReturn(x) {
+	 if(x.readyState == 4 && x.status == 200) {
+	 return true;
+	}
+}
+      
+function getQuotes(item, index){
+   	var ajax = ajaxObj("POST","https://query.yahooapis.com/v1/public/yql");
+	ajax.send("q=SELECT%20*%20FROM%20yahoo.finance.quote%20WHERE%20symbol%20%3D%20'" + item + "'&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys");
+	
+	ajax.onreadystatechange = function() {
+		if(ajaxReturn(ajax) == true) {
+			var response = ajax.responseText;
+			response = JSON.parse(response);
+						
+			if(response.query.results.quote.LastTradePriceOnly != null) {
+				quote_results(response);
+			}else{
+				alert(response.query.results.quote.symbol + " is not a valid stock symbol");
+				tickers.pop();
+				if(tickers.length == 0){document.getElementById('nostockmessage').innerHTML = "No Stocks Yet!!"}
+			}
+		};
+	}
+}
+  
+function quote_results(o){  
+	    var items = o.query.results.quote;  
+	    var output = '';  
+        var name = items.Name;  
+        var symbol = items.Symbol;  
+        var change = (+items.Change).toFixed(2);  
+		var lastprice = (+items.LastTradePriceOnly).toFixed(2);
+		var dayshigh = (+items.DaysHigh).toFixed(2);
+		var dayslow = (+items.DaysLow).toFixed(2);
+		var percentchange = (100 * change / (lastprice - change)).toFixed(2);
+	   	   
+		   
+		   
+	var div = document.createElement("div");  
+	div.setAttribute('id', symbol);
+	div.setAttribute('class', 'quotes');
+	document.getElementById('quotes').appendChild(div); 
+	
+	var para = document.createElement("P");  
+	para.setAttribute('class', 'name');
+	var t = document.createTextNode(name);      
+	para.appendChild(t);                        
+	document.getElementById(symbol).appendChild(para);  
+	
+	para = document.createElement("P");   
+	para.setAttribute('class', 'symbol');
+	t = document.createTextNode(symbol);      
+	para.appendChild(t);                        
+	document.getElementById(symbol).appendChild(para);  
+	 
+	para = document.createElement("P");    
+		//para.setAttribute('id', 'stkchange');
+		change < 0? para.setAttribute('class', 'red') : para.setAttribute('class', 'green');
+	var mystring = "";	
+		change < 0? mystring = "▼" : mystring = "▲";
+		mystring += change + " (" + percentchange + "%)";
+	t = document.createTextNode(mystring);      
+	para.appendChild(t);                        
+	document.getElementById(symbol).appendChild(para);  
+	
+	para = document.createElement("P"); 
+	para.setAttribute('class', 'lastprice');
+	t = document.createTextNode("$" + lastprice);      
+	para.appendChild(t);                        
+	document.getElementById(symbol).appendChild(para);  
+	
+	div = document.createElement("div");  
+	div.setAttribute('class', 'innerdiv');
+	div.setAttribute('id', symbol + 'innerdiv');
+	document.getElementById(symbol).appendChild(div); 
+	
+	div = document.createElement("div");  
+	div.setAttribute('class', 'high');
+	t = document.createTextNode("$" + dayshigh);      
+	div.appendChild(t); 
+	document.getElementById(symbol + 'innerdiv').appendChild(div); 
+	
+	div = document.createElement("div");  
+	div.setAttribute('class', 'low');
+	t = document.createTextNode("$" + dayslow );      
+	div.appendChild(t); 
+	document.getElementById(symbol + 'innerdiv').appendChild(div); 
+	
+	div = document.createElement("div");  
+	div.setAttribute('class', 'pointer');
+	var pointerposition = ((dayshigh - lastprice) / (dayshigh - dayslow)) * 100 - 22;
+	div.setAttribute('style', 'top:' + pointerposition + 'px');
+	t = document.createTextNode("→");      
+	div.appendChild(t);   
+	document.getElementById(symbol + 'innerdiv').appendChild(div); 
+}  
+	
+function addstock(){
+	var newticker = document.getElementById('newticker').value;
+	newticker = newticker.toUpperCase();
+	if(!tickers.includes(newticker)){
+		document.getElementById('nostockmessage').innerHTML = "";
+		tickers.push(newticker);
+		getQuotes(newticker);
+		document.getElementById('newticker').value = "";
+	}else{
+		alert(newticker + " is already being displayed");
+		document.getElementById('newticker').value = "";
+	}
+}
+	
+function refreshquotes(){
+	var node = document.getElementById('quotes');
+	while (node.hasChildNodes()) {
+    node.removeChild(node.lastChild);
+	}
+	tickers.forEach(getQuotes);
+}
+
+function clearstocks(){
+	tickers = [];
+	refreshquotes();
+	document.getElementById('nostockmessage').innerHTML = "No Stocks Yet!!";
+}
+	
+</script>  
+	
+</head>  
+<body>  
+  <div class="container">
+  <div id="inputarea" class="center">
+    <input type="text" id="newticker" placeholder="Enter stock symbol"><br/>
+	<input type="submit" value="Add Stock" onClick="addstock()">
+	<input type="submit" value="Refresh Quotes" onClick="refreshquotes()">
+	<input type="submit" value="Clear Stocks" onClick="clearstocks()">
+  </div>
+	
+	<h1 id="nostockmessage" class="center" ></h1>
+	<div id='quotes'>
+	
+	</div>  
+	</div> <!-- End container -->	
+</body>  
+  
+<script>
+	if(tickers.length == 0){document.getElementById('nostockmessage').innerHTML = "No Stocks Yet!!"}
+	tickers.forEach(getQuotes);
+</script>
+  
+</html>  
